@@ -22,7 +22,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Sliding")]
     public float slideSpeedMultiplier = 1.2f;
-    public float slideSpeedDecay = 0.98f; // Slower decay for better momentum
+    public float slideSpeedDecay = 0.98f;
     public float slideCooldown = 0.5f;
     private bool isSliding = false;
     private float slideCooldownTimer = 0f;
@@ -35,12 +35,12 @@ public class PlayerController : MonoBehaviour
     private bool isGrounded;
 
     [Header("Momentum Tuning")]
-    public float maxSlideSpeed = 50f; // Cap slide speed
-    public float airControl = 0.3f; // Allow slight movement input while sliding/in air
-    public float dashDuringSlideBoost = 1.5f; // Extra speed when dashing mid-slide
+    public float maxSlideSpeed = 50f;
+    public float airControl = 0.3f;
+    public float dashDuringSlideBoost = 1.5f;
 
     [Header("UI")]
-    public Text speedText; // Reference to UI Text element
+    public Text speedText;
 
     void Start()
     {
@@ -60,7 +60,7 @@ public class PlayerController : MonoBehaviour
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 
-        // Dash input (now works during slides)
+        // Dash input
         if (Input.GetKeyDown(KeyCode.LeftShift) && !isDashing && dashCooldownTimer <= 0f)
         {
             StartCoroutine(Dash());
@@ -86,16 +86,13 @@ public class PlayerController : MonoBehaviour
         dashCooldownTimer = Mathf.Max(0f, dashCooldownTimer - Time.deltaTime);
         slideCooldownTimer = Mathf.Max(0f, slideCooldownTimer - Time.deltaTime);
 
-        // Ground check
         isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
 
-        // Apply gravity
         if (!isGrounded)
         {
             rb.linearVelocity += Vector3.up * Physics.gravity.y * gravityMultiplier * Time.deltaTime;
         }
 
-        // Update speed display
         UpdateSpeedUI();
     }
 
@@ -103,20 +100,19 @@ public class PlayerController : MonoBehaviour
     {
         if (isSliding)
         {
-            // Apply decay to horizontal momentum
+          
             slideMomentum = new Vector3(
                 slideMomentum.x * slideSpeedDecay,
                 slideMomentum.y,
                 slideMomentum.z * slideSpeedDecay
             );
 
-            // Allow steering and clamp speed
+            
             float x = Input.GetAxis("Horizontal") * airControl;
             float z = Input.GetAxis("Vertical") * airControl;
             Vector3 move = transform.right * x + transform.forward * z;
             slideMomentum += move * moveSpeed * 0.5f; // Reduced steering power
 
-            // Clamp horizontal speed only
             Vector3 horizontalMomentum = new Vector3(slideMomentum.x, 0, slideMomentum.z);
             horizontalMomentum = Vector3.ClampMagnitude(horizontalMomentum, maxSlideSpeed);
             slideMomentum = new Vector3(horizontalMomentum.x, slideMomentum.y, horizontalMomentum.z);
@@ -125,7 +121,7 @@ public class PlayerController : MonoBehaviour
         }
         else if (!isDashing)
         {
-            // Normal WASD movement
+          
             float x = Input.GetAxis("Horizontal");
             float z = Input.GetAxis("Vertical");
             Vector3 move = transform.right * x + transform.forward * z;
@@ -137,7 +133,7 @@ public class PlayerController : MonoBehaviour
     {
         if (speedText != null)
         {
-            // Convert m/s to km/h and display
+         
             float speed = rb.linearVelocity.magnitude * 3.6f;
             speedText.text = $"Speed: {speed:F1} km/h";
         }
@@ -148,7 +144,6 @@ public class PlayerController : MonoBehaviour
         isDashing = true;
         Vector3 dashDirection;
 
-        // If sliding, dash in the slide direction + current input
         if (isSliding)
         {
             dashDirection = (slideMomentum.normalized + transform.forward * Input.GetAxisRaw("Vertical")).normalized;
@@ -156,7 +151,6 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // Default dash logic
             dashDirection = (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
                 ? (transform.forward * Input.GetAxisRaw("Vertical") + transform.right * Input.GetAxisRaw("Horizontal")).normalized
                 : transform.forward;
@@ -165,7 +159,6 @@ public class PlayerController : MonoBehaviour
 
         yield return new WaitForSeconds(dashDuration);
 
-        // Preserve momentum after dash (don't reset if sliding)
         if (!isSliding)
         {
             rb.linearVelocity *= 0.8f; // Mild slowdown instead of hard reset
@@ -178,9 +171,8 @@ public class PlayerController : MonoBehaviour
     void StartSlide()
     {
         isSliding = true;
-        // Capture ALL current velocity (including dash/jump momentum)
         slideMomentum = rb.linearVelocity * slideSpeedMultiplier;
-        slideMomentum.y = rb.linearVelocity.y; // Preserve gravity
+        slideMomentum.y = rb.linearVelocity.y;
     }
 
     void StopSlide()
@@ -191,12 +183,9 @@ public class PlayerController : MonoBehaviour
 
     void Jump()
     {
-        // Preserve ALL momentum (horizontal + vertical from slides/dashes)
         Vector3 jumpVelocity = rb.linearVelocity;
         jumpVelocity.y = jumpForce + (rb.linearVelocity.magnitude * momentumJumpMultiplier);
         rb.linearVelocity = jumpVelocity;
-
-        // Exit slide state when jumping
         if (isSliding) StopSlide();
     }
 }
